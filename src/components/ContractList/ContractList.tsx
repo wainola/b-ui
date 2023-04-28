@@ -1,55 +1,73 @@
-import { createEffect, createSignal, Show, For } from "solid-js";
+import { A } from "@solidjs/router";
+import {
+  createEffect,
+  Show,
+  For,
+  useContext,
+  Accessor,
+  Setter,
+} from "solid-js";
+import { DomainsContext } from "../../App";
 import { fetchBridgeSetup } from "../../bridgeSetup";
+import { Domain } from "../../types";
 
-type Domain = {
-  id: number;
-  name: string;
-  type: string;
-  bridge: string;
-  handlers: Array<{
-    type: string,
-    address: string
-  }>;
-  nativeTokenSymbol: string;
-  nativeTokenDecimals: number;
-  nativeTokenFullName: string;
-  startBlock: number;
-  blockConfirmations: number;
-  feeRouter: string;
-  feeHandlers: Array<{ address: string, type: 'basic' | 'oracle' }>;
-  resources: Array<{ resourceId: string, type: string, address: string, symbol: string, decimals: number }>;
-}
-
-export default function ContractLists () {
-  const [domains, setDomains] = createSignal<{ domains: Domain[] } | null>(null);
+export default function ContractLists() {
+  const { domains, setDomains } = useContext(DomainsContext) as {
+    domains: Accessor<{ domains: Domain[] }| []>;
+    setDomains: Setter<Domain[] | []>;
+  };
 
   const fetchConfig = async () => {
-    const resources = await fetchBridgeSetup()
+    const resources = await fetchBridgeSetup();
 
-    setDomains(resources)
-  }
+    setDomains(resources);
+  };
   createEffect(() => {
-    fetchConfig()
-  })
-  
-  createEffect(() => console.log("Domains", domains()), domains())
+    fetchConfig();
+  });
+
+  createEffect(() => console.log("Domains", domains()), domains());
 
   return (
     <div>
       <h1>Contract Lists</h1>
-      <Show when={domains() !== null} fallback={
-        <div>
-          Loading contract list...
-        </div>
-      }>
-        <For each={domains()!.domains}>
-          {(domain: Domain) => (
-            <div>
-              <span>Domain id: {domain.id}</span>
-            </div>
-          )}
-        </For>
+      <Show
+        when={domains() !== null}
+        fallback={<div>Loading contract list...</div>}
+      >
+        <table
+          style={{
+            border: "1px solid black",
+          }}
+        >
+          <thead>
+            <tr>
+              <td>id</td>
+              <td>name</td>
+              <td>bridge</td>
+              <td>native token symbol</td>
+              <td>Network type</td>
+              <td>Resources</td>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={(domains() as { domains: Domain[]})!.domains}>
+              {(domain: Domain) => (
+                <tr>
+                  <td>{domain.id}</td>
+                  <td>{domain.name}</td>
+                  <td>
+                    <A href={`/bridge/${domain.bridge}`} state={domain.id}>{domain.bridge}</A>
+                  </td>
+                  <td>{domain.nativeTokenSymbol}</td>
+                  <td>{domain.type}</td>
+                  <td>{domain.resources.length}</td>
+                </tr>
+              )}
+            </For>
+          </tbody>
+        </table>
       </Show>
     </div>
-  )
+  );
 }

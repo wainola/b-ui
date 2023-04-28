@@ -641,6 +641,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@solidjs/router@npm:^0.8.2":
+  version: 0.8.2
+  resolution: "@solidjs/router@npm:0.8.2"
+  peerDependencies:
+    solid-js: ^1.5.3
+  checksum: 641552d5a32e870c85a2ec2257583c0fcfd283a05927daa847ca13ad99a41584ad089477f7caec465630b010fe7bdfbd564a77571fd74044bf330184ca0a6f57
+  languageName: node
+  linkType: hard
+
 "@tootallnate/once@npm:2":
   version: 2.0.0
   resolution: "@tootallnate/once@npm:2.0.0"
@@ -829,6 +838,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "bridge-ui@workspace:."
   dependencies:
+    "@solidjs/router": ^0.8.2
     "@types/node": ^18.16.2
     dotenv: ^16.0.3
     ethers: ^6.3.0
