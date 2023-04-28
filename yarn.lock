@@ -689,6 +689,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/node@npm:^18.16.2":
+  version: 18.16.2
+  resolution: "@types/node@npm:18.16.2"
+  checksum: 7ad66d23b3b93885a9f879bff98e0196790ad35589b47a3d81b52db969ad17ee298082020296df5166c2d72d3cd6a4b9ab34d254483637d967944a4b3e6febdb
+  languageName: node
+  linkType: hard
+
 "abbrev@npm:^1.0.0":
   version: 1.1.1
   resolution: "abbrev@npm:1.1.1"
@@ -817,6 +824,20 @@ __metadata:
   checksum: a61e7cd2e8a8505e9f0036b3b6108ba5e926b4b55089eeb5550cd04a471fe216c96d4fe7e4c7f995c728c554ae20ddfc4244cad10aef255e72b62930afd233d1
   languageName: node
   linkType: hard
+
+"bridge-ui@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "bridge-ui@workspace:."
+  dependencies:
+    "@types/node": ^18.16.2
+    dotenv: ^16.0.3
+    ethers: ^6.3.0
+    solid-js: ^1.6.10
+    typescript: ^4.9.5
+    vite: ^4.1.1
+    vite-plugin-solid: ^2.5.0
+  languageName: unknown
+  linkType: soft
 
 "browserslist@npm:^4.21.3":
   version: 4.21.5
@@ -966,6 +987,13 @@ __metadata:
   version: 2.0.0
   resolution: "depd@npm:2.0.0"
   checksum: abbe19c768c97ee2eed6282d8ce3031126662252c58d711f646921c9623f9052e3e1906443066beec1095832f534e57c523b7333f8e7e0d93051ab6baef5ab3a
+  languageName: node
+  linkType: hard
+
+"dotenv@npm:^16.0.3":
+  version: 16.0.3
+  resolution: "dotenv@npm:16.0.3"
+  checksum: afcf03f373d7a6d62c7e9afea6328e62851d627a4e73f2e12d0a8deae1cd375892004f3021883f8aec85932cd2834b091f568ced92b4774625b321db83b827f8
   languageName: node
   linkType: hard
 
@@ -1991,18 +2019,6 @@ __metadata:
   checksum: 1631b17f0cdd9c3aaa0a8a8f630a44accdd274d6644eea909929960aba19ca0f0f9a7ded37acc74c7ce047cb61b23badbee5336eb6e8e4ef1a69e25347415d46
   languageName: node
   linkType: hard
-
-"vite-template-solid@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "vite-template-solid@workspace:."
-  dependencies:
-    ethers: ^6.3.0
-    solid-js: ^1.6.10
-    typescript: ^4.9.5
-    vite: ^4.1.1
-    vite-plugin-solid: ^2.5.0
-  languageName: unknown
-  linkType: soft
 
 "vite@npm:^4.1.1":
   version: 4.3.3
