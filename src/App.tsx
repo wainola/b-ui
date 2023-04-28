@@ -1,9 +1,9 @@
 import { Component, createEffect, createMemo, createSignal } from "solid-js";
-
 import logo from "./logo.svg";
 import styles from "./App.module.css";
 import { handleConnection } from "./handleConnect";
 import { formatBalance, getProvider, getSigner } from "./accountData";
+import { ContractList } from './components';
 
 const App: Component = () => {
   const [account, setAccount] = createSignal<string | null>(null);
@@ -54,6 +54,7 @@ const App: Component = () => {
         <h4>Chain Id: {chainId() || "No chainId"}</h4>
         <h4>Balance of account: {balance() || "No Balance yet"}</h4>
       </div>
+      <ContractList />
     </div>
   );
 };
