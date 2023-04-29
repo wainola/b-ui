@@ -13,19 +13,17 @@ export const resolveConnectionToResources = (resource: Domain['resources'][0], p
       null;
   }
 
-  setConnectedResources((current) => {
-    const c = {
+  setConnectedResources([
+    ...connectedResources(),
+    {
       type: resource.type,
       address: resource.address,
       contract: erc20Contract as ERC20,
       resourceId: resource.resourceId,
       connected: true
     } as ConnectedResource
+  ])
 
-    (current as ConnectedResources).push(c);
-
-    return current;
-  })
 }
 
 const connectErc20Contract = (address: string, provider: ethers.BrowserProvider): ERC20 => {

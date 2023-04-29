@@ -24,10 +24,24 @@ export default function Bridge() {
 
   const domainSelected = (domains() as { domains: Domain[]}).domains.find((domain: Domain) => domain.id === state)
 
-  const handleConnectResource = (resource: Domain['resources'][0]) => async () => resolveConnectionToResources(resource, provider as ethers.BrowserProvider, setConnectedResources, connectedResources)
+  const handleConnectResource = (resource: Domain['resources'][0]) => () => resolveConnectionToResources(resource, provider as ethers.BrowserProvider, setConnectedResources, connectedResources)
 
-  createEffect(() => console.log("Connected resources", connectedResources()), connectedResources())
-  
+  createEffect(() => console.warn("Connected resources", Object.keys(connectedResources())))
+
+  const renderConnectedSpan = (resource: Domain['resources'][0]) => {
+    const resourceFound = connectedResources().find((connectedResource: ConnectedResource) => connectedResource.address === resource.address)
+    if (resourceFound !== undefined) {
+      return (<span style={{
+        color: "white",
+        width: "40px",
+        height: "40px",
+        background: "green",
+      }}>Connected!</span>)
+    } else {
+      return (<button onClick={handleConnectResource(resource)}>Connect?</button>)
+    }
+  }
+
   return (
     <div>
       <h1>Bridge and resources!</h1>
@@ -58,7 +72,11 @@ export default function Bridge() {
                     <td>{resource.decimals}</td>
                     <td>{resource.resourceId}</td>
                     <td>{resource.symbol}</td>
-                    <td> <button onClick={handleConnectResource(resource)}>Connect?</button> </td>
+                    <td>
+                      <Show when={connectedResources().length !== 0} fallback={<button onClick={handleConnectResource(resource)}>Connect?</button> }>
+                        {renderConnectedSpan(resource)}
+                      </Show>
+                      </td>
                   </tr>
                 )}
               </For>
