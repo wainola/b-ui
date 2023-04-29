@@ -1,19 +1,32 @@
+import { ERC20, ERC721 } from "@buildwithsygma/sygma-contracts";
 import { A, useLocation, useRouteData } from "@solidjs/router";
-import { Accessor, For, Setter, Show, useContext } from "solid-js";
+import { ethers } from "ethers";
+import { Accessor, createEffect, createSignal, For, onMount, Setter, Show, useContext } from "solid-js";
 import { DomainsContext } from "../../App";
 import { Domain } from "../../types";
+import { resolveConnectionToResources } from "./utils";
+
+export type ConnectedResource = Pick<Domain['resources'][0], "type" | "address" | "resourceId"> & { connected: boolean, contract: ERC20 | ERC721 }
+export type ConnectedResources = Array<ConnectedResource>
 
 export default function Bridge() {
-  const { domains, setDomains } = useContext(DomainsContext) as {
+  const { domains, setDomains, provider, signer } = useContext(DomainsContext) as {
     domains: Accessor<{ domains: Domain[] }| []>;
     setDomains: Setter<Domain[] | []>;
+    provider: Accessor<ethers.BrowserProvider> | {};
+    signer: Accessor<ethers.Signer> | {};
   };
+  const [connectedResources, setConnectedResources] = createSignal<ConnectedResources | []>([])
 
   const routerData = useLocation()
   
   const { state } = routerData
 
   const domainSelected = (domains() as { domains: Domain[]}).domains.find((domain: Domain) => domain.id === state)
+
+  const handleConnectResource = (resource: Domain['resources'][0]) => async () => resolveConnectionToResources(resource, provider as ethers.BrowserProvider, setConnectedResources, connectedResources)
+
+  createEffect(() => console.log("Connected resources", connectedResources()), connectedResources())
   
   return (
     <div>
@@ -33,6 +46,7 @@ export default function Bridge() {
                 <td>resource decimals</td>
                 <td>resource resourceId</td>
                 <td>resource symbol</td>
+                <td>Connected?</td>
               </tr>
             </thead>
             <tbody>
@@ -44,6 +58,7 @@ export default function Bridge() {
                     <td>{resource.decimals}</td>
                     <td>{resource.resourceId}</td>
                     <td>{resource.symbol}</td>
+                    <td> <button onClick={handleConnectResource(resource)}>Connect?</button> </td>
                   </tr>
                 )}
               </For>

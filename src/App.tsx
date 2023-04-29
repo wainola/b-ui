@@ -6,10 +6,13 @@ import { formatBalance, getProvider, getSigner } from "./accountData";
 import { Bridge, ContractList } from "./components";
 import { Route, Router, Routes } from "@solidjs/router";
 import { Domain } from "./types";
+import { ethers } from "ethers";
 
 export const DomainsContext = createContext({
   domains: [] as Accessor<{ domains: Domain[] }| []> | [],
   setDomains: null as null | Setter<Domain[] | []>,
+  provider: {} as Accessor<ethers.BrowserProvider> | {},
+  signer: {} as Accessor<ethers.Signer> | {}
 });
 
 const App: Component = () => {
@@ -17,6 +20,8 @@ const App: Component = () => {
   const [chainId, setChainId] = createSignal<number | null>(null);
   const [balance, setBalance] = createSignal<string | null>(null);
   const [domains, setDomains] = createSignal<{ domains: Domain[] } | []>([]);
+  const [provider, setProvider] = createSignal<ethers.BrowserProvider | {}>({});
+  const [signer, setSigner] = createSignal<ethers.Signer | {}>({});
 
   createEffect(() => {
     if ((window as any).ethereum) {
@@ -33,7 +38,9 @@ const App: Component = () => {
   const computeSigner = async () => {
     if (account() !== null) {
       const provider = getProvider((window as any).ethereum);
+      setProvider(provider);
       const signer = await getSigner(provider, account() as string);
+      setSigner(signer);
 
       const balance = await provider.getBalance(await signer.getAddress());
       const balanceFormated = formatBalance(balance);
@@ -52,7 +59,7 @@ const App: Component = () => {
   }, chainId());
 
   return (
-    <DomainsContext.Provider value={{ domains, setDomains }}>
+    <DomainsContext.Provider value={{ domains, setDomains, provider, signer }}>
       <Router>
         <div class={styles.App}>
           <h1>Metamask connector</h1>
