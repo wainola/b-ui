@@ -1,4 +1,4 @@
-import { ERC20, ERC20__factory, FeeHandlerRouter, FeeHandlerRouter__factory } from "@buildwithsygma/sygma-contracts";
+import { DynamicERC20FeeHandlerEVM, DynamicERC20FeeHandlerEVM__factory, ERC20, ERC20__factory, FeeHandlerRouter, FeeHandlerRouter__factory } from "@buildwithsygma/sygma-contracts";
 import { ContractTransactionResponse, ethers, TransactionReceipt } from "ethers";
 import { Accessor, Setter } from "solid-js";
 import { Domain } from "../../types";
@@ -108,4 +108,55 @@ export const fetchFeeHandlerAddress = async (domains: Accessor<{ domains: Domain
     );
 
   return feeHandlerAddress
+}
+
+export const requestFeeOracleFee = async (
+  fromDomainId: number,
+  toDomainId: number,
+  resourceId: string,
+  msgGasLimit?: number
+) => {
+  const { VITE_FEE_ORACLE_URL } = import.meta.env
+  const response = await fetch(`${VITE_FEE_ORACLE_URL}/v1/rate/from/${fromDomainId}/to/${toDomainId}/resourceid/${resourceId}?gasLimit=${msgGasLimit || 0}`, {
+    headers: {
+      'Cache-Control': 'no-cache',
+    },
+  })
+  
+  const data = await response.json()
+
+  return data.response
+}
+
+export type FeeOracleResponse = { baseEffectiveRate: string, tokenEffectiveRate: string, dstGasPrice: string, expirationTimestamp: number, fromDomainID: number, toDomainID: number, resourceID: string, msgGasLimit: number, signature: string }
+
+export const createFeeOracleData = (oracleResponse: FeeOracleResponse , amount: string): string => {
+  const oracleData = ethers.solidityPacked([
+    'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32', 'uint256'
+  ], [
+    ethers.parseEther(oracleResponse.baseEffectiveRate),
+    ethers.parseEther(oracleResponse.tokenEffectiveRate),
+    ethers.parseUnits(oracleResponse.dstGasPrice, 'wei'),
+    oracleResponse.expirationTimestamp,
+    oracleResponse.fromDomainID,
+    oracleResponse.toDomainID,
+    oracleResponse.resourceID,
+    oracleResponse.msgGasLimit
+  ])
+
+  const signature = oracleResponse.signature
+  return oracleData + signature + ethers.toBeHex(amount, 32).substring(2)
+}
+
+export const calculateDynamicFee = async (feeHandlerWithOracle: DynamicERC20FeeHandlerEVM, sender: string, fromDomainId: string, toDomainId: string, resourceId: string, depositData: string, feeData: string) => {
+  const res = await feeHandlerWithOracle.calculateFee(
+    sender,
+    fromDomainId,
+    toDomainId,
+    resourceId,
+    depositData,
+    feeData
+  )
+  console.log("🚀 ~ file: utils.ts:158 ~ calculateDynamicFee ~ res:", res)
+
 }

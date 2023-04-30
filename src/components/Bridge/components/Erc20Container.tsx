@@ -18,7 +18,7 @@ import {
 import { resourceIdtoChainId } from "../../../resourceIdToChainId";
 import { Domain } from "../../../types";
 import { ConnectedResource } from "../Bridge";
-import { fetchContractNameAndBalance, approveTheBridge, preparedDepositDataWithoutFee, fetchFeeHandlerAddress } from "../utils";
+import { fetchContractNameAndBalance, approveTheBridge, preparedDepositDataWithoutFee, fetchFeeHandlerAddress, requestFeeOracleFee, createFeeOracleData, FeeOracleResponse } from "../utils";
 
 export default function Erc20Container({
   resource,
@@ -90,6 +90,24 @@ export default function Erc20Container({
       "🚀 ~ file: Erc20Container.tsx:115 ~ prepareDepositData ~ feeHandlerAddress:",
       feeHandlerAddress,
     );
+
+    const feeFromFeeOracle = await requestFeeOracleFee(
+      currentDomainId?.id!,
+      Number(destinationId),
+      resourceId,
+    )
+    console.warn("🚀 ~ file: Erc20Container.tsx:99 ~ prepareDepositData ~ feeFromFeeOracle:", feeFromFeeOracle)
+
+    const feeData: string = createFeeOracleData(
+      feeFromFeeOracle as FeeOracleResponse,
+      amountToDeposit() as string
+    )
+
+    const currentDomain = (domains() as { domains: Domain[] }).domains.find((domain: Domain) => domain.id === currentDomainId?.id)
+
+    const typeOfFeeHandler = currentDomain?.feeHandlers.find((elem) => elem.address === feeHandlerAddress)
+    console.log("🚀 ~ file: Erc20Container.tsx:109 ~ prepareDepositData ~ typeOfFeeHandler:", typeOfFeeHandler)
+
   };
 
   createEffect(() => {
