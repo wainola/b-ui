@@ -89,7 +89,7 @@ export default function Bridge() {
 
     const erc721Components = erc721Resources.length !== 0 && erc721Resources.map((resource: ConnectedResource) => lazy(() => import('./components/Erc721Container')));
 
-    const resolvedErc20Containers = erc20Components && erc20Components.map((Erc20Container: any, index: number) => <Erc20Container resource={erc20Resources[index]} />);
+    const resolvedErc20Containers = erc20Components && erc20Components.map((Erc20Container: any, index: number) => <Erc20Container resource={erc20Resources[index]} signer={signer} />);
 
     const resolvedErc721Containers = erc721Components && erc721Components.map((Erc721Container: any, index: number) => <Erc721Container resource={erc721Resources[index]} />);
 

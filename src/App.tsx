@@ -40,6 +40,7 @@ const App: Component = () => {
       const provider = getProvider((window as any).ethereum);
       setProvider(provider);
       const signer = await getSigner(provider, account() as string);
+      console.log("🚀 ~ file: App.tsx:43 ~ computeSigner ~ signer:", signer)
       setSigner(signer);
 
       const balance = await provider.getBalance(await signer.getAddress());
@@ -72,7 +73,7 @@ const App: Component = () => {
             <h4>Balance of account: {balance() || "No Balance yet"}</h4>
           </div>
           <Routes>
-            <Route path="/" element={<ContractList />} />
+            <Route path="/" element={<ContractList chainId={chainId}/>} />
             <Route path={`/bridge/:bridgeId`} element={<Bridge />} />
           </Routes>
         </div>
