@@ -18,7 +18,7 @@ import { resolveConnectionToResources } from "./utils";
 
 export type ConnectedResource = Pick<
   Domain["resources"][0],
-  "type" | "address" | "resourceId"
+  "type" | "address" | "resourceId" | "decimals"
 > & { connected: boolean; contract: ERC20 | ERC721 };
 export type ConnectedResources = Array<ConnectedResource>;
 

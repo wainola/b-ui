@@ -10,17 +10,18 @@ export default function Erc20Container({
   signer: Accessor<ethers.Signer>;
 }) {
   
-  const fethcContractName = async (): Promise<string> => {
-    const { contract } = resource
+  const fethcContractName = async (): Promise<{name: string, balance: string }> => {
+    const { contract, decimals } = resource
     const currentSigner = signer()
     console.log(await currentSigner.getAddress())
     const connectedContract = contract.connect(currentSigner)
-    const contractName = await connectedContract.balanceOf(await currentSigner.getAddress())
-    console.log("🚀 ~ file: Erc20Container.tsx:19 ~ fethcContractName ~ contractName:", contractName)
-    return contractName
+    const contractName = await connectedContract.name()
+    const balance = ethers.formatUnits(await connectedContract.balanceOf(await currentSigner.getAddress()), decimals)
+    return { name: contractName, balance }
   }
 
   const [contractName] = createResource(fethcContractName)
+
   return (
     <div>
       <h1>ERC20 Container</h1>
@@ -42,8 +43,10 @@ export default function Erc20Container({
       </div>
       <div>
         <form action="">
-          <label>Balance of {contractName()}</label>
-          <input type="text" value='100'/>
+          <label>Balance of {contractName()?.name}</label>
+          <input type="text" value={contractName()?.balance}/>
+          <label>Amount to deposit</label>
+          <input type="text" placeholder="amount"/>
 
         </form>
       </div>
