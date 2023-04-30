@@ -74,7 +74,7 @@ const App: Component = () => {
           </div>
           <Routes>
             <Route path="/" element={<ContractList chainId={chainId}/>} />
-            <Route path={`/bridge/:bridgeId`} element={<Bridge />} />
+            <Route path={`/bridge/:bridgeId`} element={<Bridge chainId={chainId}/>} />
           </Routes>
         </div>
       </Router>

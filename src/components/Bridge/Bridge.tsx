@@ -22,7 +22,11 @@ export type ConnectedResource = Pick<
 > & { connected: boolean; contract: ERC20 | ERC721 };
 export type ConnectedResources = Array<ConnectedResource>;
 
-export default function Bridge() {
+export default function Bridge({
+  chainId,
+}: {
+  chainId: Accessor<number | null>;
+}) {
   const { domains, setDomains, provider, signer } = useContext(
     DomainsContext,
   ) as {
@@ -82,19 +86,45 @@ export default function Bridge() {
 
   const renderContractsContainers = () => {
     const resources = connectedResources();
-    const erc20Resources = resources.filter((resource: ConnectedResource) => resource.type === "erc20");
-    const erc721Resources = resources.filter((resource: ConnectedResource) => resource.type === "erc721");
+    const erc20Resources = resources.filter(
+      (resource: ConnectedResource) => resource.type === "erc20",
+    );
+    const erc721Resources = resources.filter(
+      (resource: ConnectedResource) => resource.type === "erc721",
+    );
 
-    const erc20Components = erc20Resources.length !== 0 && erc20Resources.map((resource: ConnectedResource) => lazy(() => import('./components/Erc20Container')));
+    const erc20Components =
+      erc20Resources.length !== 0 &&
+      erc20Resources.map((resource: ConnectedResource) =>
+        lazy(() => import("./components/Erc20Container")),
+      );
 
-    const erc721Components = erc721Resources.length !== 0 && erc721Resources.map((resource: ConnectedResource) => lazy(() => import('./components/Erc721Container')));
+    const erc721Components =
+      erc721Resources.length !== 0 &&
+      erc721Resources.map((resource: ConnectedResource) =>
+        lazy(() => import("./components/Erc721Container")),
+      );
 
-    const resolvedErc20Containers = erc20Components && erc20Components.map((Erc20Container: any, index: number) => <Erc20Container resource={erc20Resources[index]} signer={signer} bridge={domainSelected?.bridge} domains={domains} />);
+    const resolvedErc20Containers =
+      erc20Components &&
+      erc20Components.map((Erc20Container: any, index: number) => (
+        <Erc20Container
+          resource={erc20Resources[index]}
+          signer={signer}
+          bridge={domainSelected?.bridge}
+          domains={domains}
+          chainId={chainId}
+        />
+      ));
 
-    const resolvedErc721Containers = erc721Components && erc721Components.map((Erc721Container: any, index: number) => <Erc721Container resource={erc721Resources[index]} />);
+    const resolvedErc721Containers =
+      erc721Components &&
+      erc721Components.map((Erc721Container: any, index: number) => (
+        <Erc721Container resource={erc721Resources[index]} />
+      ));
 
     return [resolvedErc20Containers, resolvedErc721Containers];
-  } 
+  };
 
   return (
     <div>

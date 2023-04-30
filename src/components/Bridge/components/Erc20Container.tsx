@@ -1,4 +1,4 @@
-import { ERC20 } from "@buildwithsygma/sygma-contracts";
+import { ERC20, FeeHandlerRouter, FeeHandlerRouter__factory } from "@buildwithsygma/sygma-contracts";
 import { ContractTransactionResponse, ethers } from "ethers";
 import {
   Accessor,
@@ -16,11 +16,13 @@ export default function Erc20Container({
   signer,
   bridge,
   domains,
+  chainId
 }: {
   resource: ConnectedResource;
   signer: Accessor<ethers.Signer>;
   bridge: string;
   domains: Accessor<{ domains: Domain[] } | []>;
+  chainId: Accessor<number | null>;
 }) {
   const [amountToDeposit, setAmountToDeposit] = createSignal<string | null>(
     null,
@@ -80,7 +82,7 @@ export default function Erc20Container({
     // then deposit
   };
 
-  const encodeDeposit = async () => {
+  const preparedDepositDataWithoutFee = async (): Promise<[string, string, string]> => {
     const destinationId = destination();
     const resourceId = resource.resourceId;
     const amount = ethers.parseUnits(amountToDeposit() as string, resource.decimals);
@@ -93,11 +95,32 @@ export default function Erc20Container({
     const depositData = ethers.concat([parsedAmount, lenSender, addressToUin8Array])
     const despositDataHex = ethers.hexlify(depositData)
 
-    return despositDataHex
+    return [despositDataHex, destinationId as string, resourceId]
   };
+
+  const prepareDepositData = async () => {
+    const [encodedDepositData, destinationId, resourceId] = await preparedDepositDataWithoutFee()
+
+    const currentDomainId = resourceIdtoChainId.find(elem => elem.chainId === chainId())
+
+    const feeRouterInstance = FeeHandlerRouter__factory.connect(
+      (domains() as { domains: Domain[] }).domains.find(domain => domain.id === Number(currentDomainId?.id))?.feeRouter as string,
+      signer()
+    ) as FeeHandlerRouter
+
+    const feeHandlerAddress = await feeRouterInstance._domainResourceIDToFeeHandlerAddress(
+      destinationId,
+      resourceId
+    )
+    console.log("🚀 ~ file: Erc20Container.tsx:115 ~ prepareDepositData ~ feeHandlerAddress:", feeHandlerAddress)
+  }
 
   createEffect(() => {
     console.log("approveToTheBridge", approveToTheBridge());
+
+    if(approveToTheBridge()){
+      prepareDepositData()
+    }
   }, approveToTheBridge());
 
 
