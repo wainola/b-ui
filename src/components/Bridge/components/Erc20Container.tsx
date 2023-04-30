@@ -1,16 +1,26 @@
 import { ERC20 } from "@buildwithsygma/sygma-contracts";
 import { ContractTransactionResponse, ethers } from "ethers";
-import { Accessor, createEffect, createResource, createSignal } from "solid-js";
+import {
+  Accessor,
+  createEffect,
+  createResource,
+  createSignal,
+  For,
+} from "solid-js";
+import { resourceIdtoChainId } from "../../../resourceIdToChainId";
+import { Domain } from "../../../types";
 import { ConnectedResource } from "../Bridge";
 
 export default function Erc20Container({
   resource,
   signer,
   bridge,
+  domains,
 }: {
   resource: ConnectedResource;
   signer: Accessor<ethers.Signer>;
   bridge: string;
+  domains: Accessor<{ domains: Domain[] } | []>;
 }) {
   const [amountToDeposit, setAmountToDeposit] = createSignal<string | null>(
     null,
@@ -18,6 +28,8 @@ export default function Erc20Container({
   const [amountToApprove, setAmountToApprove] = createSignal<string | null>(
     null,
   );
+
+  const [destination, setDestination] = createSignal<string | null>(null);
 
   const fethcContractName = async (): Promise<{
     name: string;
@@ -36,7 +48,6 @@ export default function Erc20Container({
   };
 
   const approveToTheBridgeFunc = async (amount: string) => {
-
     const { contract } = resource;
     const currentSigner = signer();
     const connectedContract = contract.connect(currentSigner) as ERC20;
@@ -46,7 +57,7 @@ export default function Erc20Container({
     )) as ContractTransactionResponse;
     const approveReceipt = await approve.wait();
 
-    return approveReceipt?.status
+    return approveReceipt?.status;
   };
 
   const [contractName] = createResource(fethcContractName);
@@ -69,14 +80,28 @@ export default function Erc20Container({
     // then deposit
   };
 
-  const encodeDeposit = () => {
-    
-  }
+  const encodeDeposit = async () => {
+    const destinationId = destination();
+    const resourceId = resource.resourceId;
+    const amount = ethers.parseUnits(amountToDeposit() as string, resource.decimals);
+
+    const signerAddress = await signer().getAddress();
+    // this is for the encoding
+    const addressToUin8Array = ethers.toBeArray(signerAddress);
+    const parsedAmount = ethers.zeroPadValue(ethers.toBeHex(amount), 32)
+    const lenSender = ethers.zeroPadValue(ethers.toBeHex(BigInt(addressToUin8Array.length)), 32)
+    const depositData = ethers.concat([parsedAmount, lenSender, addressToUin8Array])
+    const despositDataHex = ethers.hexlify(depositData)
+
+    return despositDataHex
+  };
 
   createEffect(() => {
     console.log("approveToTheBridge", approveToTheBridge());
+  }, approveToTheBridge());
 
-  }, approveToTheBridge())
+
+
 
   return (
     <div>
@@ -111,6 +136,25 @@ export default function Erc20Container({
             placeholder="amount"
             onInput={(e) => setAmountToDeposit(e.target.value)}
           />
+          <label>Destination {destination() || null}</label>
+          <For each={resourceIdtoChainId} fallback={null}>
+            {(elem) => (
+              <div>
+                <label>
+                  {
+                    (domains() as { domains: Domain[] }).domains.find(
+                      (domain: Domain) => domain.id === elem.id,
+                    )?.name
+                  }
+                </label>
+                <input
+                  type="checkbox"
+                  value={elem.id}
+                  onChange={(e) => setDestination(e.target.value)}
+                />
+              </div>
+            )}
+          </For>
           <button type="submit">Deposit</button>
         </form>
       </div>
