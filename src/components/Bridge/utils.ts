@@ -169,7 +169,8 @@ export const depositToBridge = async (
   resourceId: string,
   feeData: { feeData: string, feeValue: any },
   depositData: string,
-  gasPrice: ethers.FeeData
+  gasPrice: ethers.FeeData,
+  feeType: "basic" | "oracle"
 ) => {
   console.log("🚀 ~ file: utils.ts:173 ~ feeData:", feeData)
   try {
@@ -180,7 +181,7 @@ export const depositToBridge = async (
       feeData.feeData,
       {
         gasPrice: gasPrice.gasPrice,
-        value: feeData.feeValue,
+        value: feeType === 'basic' ? feeData.feeValue : undefined
       }
     )
 

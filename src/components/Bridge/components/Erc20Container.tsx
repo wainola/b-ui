@@ -1,4 +1,5 @@
 import {
+  BasicFeeHandler__factory,
   Bridge__factory,
   DynamicERC20FeeHandlerEVM__factory,
   ERC20,
@@ -95,17 +96,6 @@ export default function Erc20Container({
       feeHandlerAddress,
     );
 
-    const feeFromFeeOracle = await requestFeeOracleFee(
-      currentDomainId?.id!,
-      Number(destinationId),
-      resourceId,
-    )
-    console.warn("🚀 ~ file: Erc20Container.tsx:99 ~ prepareDepositData ~ feeFromFeeOracle:", feeFromFeeOracle)
-
-    const feeData: string = createFeeOracleData(
-      feeFromFeeOracle as FeeOracleResponse,
-      amountToDeposit() as string
-    )
 
     const currentDomain = (domains() as { domains: Domain[] }).domains.find((domain: Domain) => domain.id === currentDomainId?.id)
 
@@ -114,7 +104,25 @@ export default function Erc20Container({
 
     const { type } = typeOfFeeHandler!
 
+    let feeFromFeeOracle
+
     if(type === 'oracle'){
+      feeFromFeeOracle = await requestFeeOracleFee(
+        currentDomainId?.id!,
+        Number(destinationId),
+        resourceId,
+      )
+      console.warn("🚀 ~ file: Erc20Container.tsx:99 ~ prepareDepositData ~ feeFromFeeOracle:", feeFromFeeOracle)
+    }
+
+    const bridgeInstance = Bridge__factory.connect(bridge, signer())
+
+    if(type === 'oracle'){
+      const feeData: string = createFeeOracleData(
+        feeFromFeeOracle as FeeOracleResponse,
+        amountToDeposit() as string
+      )
+
       const feeHandler = DynamicERC20FeeHandlerEVM__factory.connect(feeHandlerAddress, signer())
       const calculatedFee = await calculateDynamicFee(
         feeHandler,
@@ -130,15 +138,40 @@ export default function Erc20Container({
       const gasPrice = await provider()?.getFeeData()
       console.log("🚀 ~ file: Erc20Container.tsx:131 ~ prepareDepositData ~ gasPrice:", gasPrice)
 
-      const bridgeInstance = Bridge__factory.connect(bridge, signer())
-
       await depositToBridge(
         bridgeInstance,
         Number(destinationId),
         resourceId,
         { feeData: calculatedFee.feeData, feeValue: calculatedFee.fee },
         encodedDepositData,
-        gasPrice!
+        gasPrice!,
+        type
+      )
+    } else {
+      const basicFeeHandler = BasicFeeHandler__factory.connect(feeHandlerAddress, signer())
+      const feeData = '0x00'
+      const calculatedFee = await basicFeeHandler.calculateFee(
+        await (signer()).getAddress(),
+        currentDomainId?.id!,
+        Number(destinationId),
+        resourceId,
+        encodedDepositData,
+        feeData
+      )
+
+      const [fee, address] = calculatedFee
+      const feeDataToUse = ethers.toBeHex(fee)
+      
+      const gasPrice = await provider()?.getFeeData()
+
+      await depositToBridge(
+        bridgeInstance,
+        Number(destinationId),
+        resourceId,
+        { feeData: feeDataToUse, feeValue: fee },
+        encodedDepositData,
+        gasPrice!,
+        type
       )
     }
 
