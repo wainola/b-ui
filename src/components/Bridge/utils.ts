@@ -20,7 +20,8 @@ export const resolveConnectionToResources = (resource: Domain['resources'][0], p
       address: resource.address,
       contract: erc20Contract as ERC20,
       resourceId: resource.resourceId,
-      connected: true
+      connected: true,
+      decimals: resource.decimals
     } as ConnectedResource
   ])
 
@@ -46,6 +47,20 @@ export const fetchContractNameAndBalance = async (resource: ConnectedResource, s
   return { name: contractName, balance };
 };
 
+export const approveTheHandler = async (amount: string, resource: ConnectedResource, signer: Accessor<ethers.Signer>, handler: string): Promise<number> => {
+  const { contract } = resource;
+  const currentSigner = signer();
+  const connectedContract = contract.connect(currentSigner) as ERC20;
+  const approve = (await connectedContract.approve(
+    handler,
+    ethers.parseUnits(amount, resource.decimals)
+  )) as ContractTransactionResponse;
+  const approveReceipt = await approve.wait();
+
+  return approveReceipt?.status as number;
+}
+
+// NOT USING THIS
 export const approveTheBridge = async (amount: string, resource: ConnectedResource, signer: Accessor<ethers.Signer>, bridge: string): Promise<number> => {
   const { contract } = resource;
   const currentSigner = signer();
@@ -186,8 +201,8 @@ export const depositToBridge = async (
     )
 
     console.log("🚀 ~ file: utils.ts:183 ~ res:", res)
-  } catch(e){
+  } catch (e) {
     console.log("🚀 ~ file: utils.ts:184 ~ e:", e)
-    
+
   }
 }

@@ -89,6 +89,7 @@ export default function Bridge({
     const erc20Resources = resources.filter(
       (resource: ConnectedResource) => resource.type === "erc20",
     );
+    
     const erc721Resources = resources.filter(
       (resource: ConnectedResource) => resource.type === "erc721",
     );

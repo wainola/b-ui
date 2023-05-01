@@ -3,14 +3,8 @@ import {
   Bridge__factory,
   DynamicERC20FeeHandlerEVM__factory,
   ERC20,
-  FeeHandlerRouter,
-  FeeHandlerRouter__factory,
 } from "@buildwithsygma/sygma-contracts";
-import {
-  ContractTransactionResponse,
-  ethers,
-  TransactionReceipt,
-} from "ethers";
+import { ethers } from "ethers";
 import {
   Accessor,
   createEffect,
@@ -21,7 +15,18 @@ import {
 import { resourceIdtoChainId } from "../../../resourceIdToChainId";
 import { Domain } from "../../../types";
 import { ConnectedResource } from "../Bridge";
-import { fetchContractNameAndBalance, approveTheBridge, preparedDepositDataWithoutFee, fetchFeeHandlerAddress, requestFeeOracleFee, createFeeOracleData, FeeOracleResponse, calculateDynamicFee, depositToBridge } from "../utils";
+import {
+  fetchContractNameAndBalance,
+  approveTheBridge,
+  preparedDepositDataWithoutFee,
+  fetchFeeHandlerAddress,
+  requestFeeOracleFee,
+  createFeeOracleData,
+  FeeOracleResponse,
+  calculateDynamicFee,
+  depositToBridge,
+  approveTheHandler,
+} from "../utils";
 
 export default function Erc20Container({
   resource,
@@ -29,7 +34,7 @@ export default function Erc20Container({
   bridge,
   domains,
   chainId,
-  provider
+  provider,
 }: {
   resource: ConnectedResource;
   signer: Accessor<ethers.Signer>;
@@ -46,27 +51,37 @@ export default function Erc20Container({
   );
 
   const [destination, setDestination] = createSignal<string | null>(null);
+  
+  const [handlerToApprove, setHandlerToApprove] = createSignal<string | null>(null)
 
   const fethcContractName = async (): Promise<{
     name: string;
     balance: string;
   }> => fetchContractNameAndBalance(resource, signer);
 
-  const approve = async (
-    amount: string,
-  ): Promise<number> =>
+  const approve = async (amount: string): Promise<number> =>
     approveTheBridge(amount, resource, signer, bridge);
 
+  const approveToTheHandler = async (amount: string) =>
+    approveTheHandler(amount, resource, signer, handlerToApprove()!);
+
   const [contractName] = createResource(fethcContractName);
-  const [approveToTheBridge] = createResource(amountToApprove, approve);
+  const [approveERC20Handler] = createResource(amountToApprove, approveToTheHandler);
 
   const handleSubmit = (e: Event) => {
     e.preventDefault();
     const amount = amountToDeposit();
-    console.log(
-      "🚀 ~ file: Erc20Container.tsx:30 ~ handleSubmit ~ amount:",
-      amount,
-    );
+    
+    const domainId = resourceIdtoChainId.find((elem) => elem.chainId === chainId());
+    
+    const typeOfHandlerToApprove = (domains() as { domains: Domain[] }).domains.find((domain: Domain) => domain.id === domainId?.id)
+    
+    const { handlers } = typeOfHandlerToApprove!;
+    
+    const handler = handlers.find((elem) => elem.type === resource.type);
+    
+    setHandlerToApprove(handler?.address!);
+    
     setAmountToApprove(amount);
   };
 
@@ -88,55 +103,68 @@ export default function Erc20Container({
       signer,
       currentDomainId!,
       resourceId,
-      destinationId
-    )
-
-    console.log(
-      "🚀 ~ file: Erc20Container.tsx:115 ~ prepareDepositData ~ feeHandlerAddress:",
-      feeHandlerAddress,
+      destinationId,
     );
 
+    const currentDomain = (domains() as { domains: Domain[] }).domains.find(
+      (domain: Domain) => domain.id === currentDomainId?.id,
+    );
 
-    const currentDomain = (domains() as { domains: Domain[] }).domains.find((domain: Domain) => domain.id === currentDomainId?.id)
+    const typeOfFeeHandler = currentDomain?.feeHandlers.find(
+      (elem) => elem.address === feeHandlerAddress,
+    );
+    console.log(
+      "🚀 ~ file: Erc20Container.tsx:109 ~ prepareDepositData ~ typeOfFeeHandler:",
+      typeOfFeeHandler,
+    );
 
-    const typeOfFeeHandler = currentDomain?.feeHandlers.find((elem) => elem.address === feeHandlerAddress)
-    console.log("🚀 ~ file: Erc20Container.tsx:109 ~ prepareDepositData ~ typeOfFeeHandler:", typeOfFeeHandler)
+    const { type } = typeOfFeeHandler!;
+    console.log(
+      "🚀 ~ file: Erc20Container.tsx:96 ~ prepareDepositData ~ type:",
+      type,
+    );
 
-    const { type } = typeOfFeeHandler!
+    let feeFromFeeOracle;
 
-    let feeFromFeeOracle
-
-    if(type === 'oracle'){
+    if (type === "oracle") {
       feeFromFeeOracle = await requestFeeOracleFee(
         currentDomainId?.id!,
         Number(destinationId),
         resourceId,
-      )
-      console.warn("🚀 ~ file: Erc20Container.tsx:99 ~ prepareDepositData ~ feeFromFeeOracle:", feeFromFeeOracle)
+      );
     }
 
-    const bridgeInstance = Bridge__factory.connect(bridge, signer())
+    const bridgeInstance = Bridge__factory.connect(bridge, signer());
 
-    if(type === 'oracle'){
+    if (type === "oracle") {
       const feeData: string = createFeeOracleData(
         feeFromFeeOracle as FeeOracleResponse,
-        amountToDeposit() as string
-      )
+        amountToDeposit() as string,
+      );
 
-      const feeHandler = DynamicERC20FeeHandlerEVM__factory.connect(feeHandlerAddress, signer())
+      const feeHandler = DynamicERC20FeeHandlerEVM__factory.connect(
+        feeHandlerAddress,
+        signer(),
+      );
       const calculatedFee = await calculateDynamicFee(
         feeHandler,
-        await (signer()).getAddress(),
+        await signer().getAddress(),
         currentDomainId?.id!,
         Number(destinationId),
         resourceId,
         encodedDepositData,
-        feeData
-      )
-      console.log("🚀 ~ file: Erc20Container.tsx:125 ~ prepareDepositData ~ calculatedFee:", calculatedFee)
+        feeData,
+      );
+      console.log(
+        "🚀 ~ file: Erc20Container.tsx:125 ~ prepareDepositData ~ calculatedFee:",
+        calculatedFee,
+      );
 
-      const gasPrice = await provider()?.getFeeData()
-      console.log("🚀 ~ file: Erc20Container.tsx:131 ~ prepareDepositData ~ gasPrice:", gasPrice)
+      const gasPrice = await provider()?.getFeeData();
+      console.log(
+        "🚀 ~ file: Erc20Container.tsx:131 ~ prepareDepositData ~ gasPrice:",
+        gasPrice,
+      );
 
       await depositToBridge(
         bridgeInstance,
@@ -145,24 +173,27 @@ export default function Erc20Container({
         { feeData: calculatedFee.feeData, feeValue: calculatedFee.fee },
         encodedDepositData,
         gasPrice!,
-        type
-      )
+        type,
+      );
     } else {
-      const basicFeeHandler = BasicFeeHandler__factory.connect(feeHandlerAddress, signer())
-      const feeData = '0x00'
+      const basicFeeHandler = BasicFeeHandler__factory.connect(
+        feeHandlerAddress,
+        signer(),
+      );
+      const feeData = "0x00";
       const calculatedFee = await basicFeeHandler.calculateFee(
-        await (signer()).getAddress(),
+        await signer().getAddress(),
         currentDomainId?.id!,
         Number(destinationId),
         resourceId,
         encodedDepositData,
-        feeData
-      )
+        feeData,
+      );
 
-      const [fee, address] = calculatedFee
-      const feeDataToUse = ethers.toBeHex(fee)
-      
-      const gasPrice = await provider()?.getFeeData()
+      const [fee, address] = calculatedFee;
+      const feeDataToUse = ethers.toBeHex(fee);
+
+      const gasPrice = await provider()?.getFeeData();
 
       await depositToBridge(
         bridgeInstance,
@@ -171,19 +202,18 @@ export default function Erc20Container({
         { feeData: feeDataToUse, feeValue: fee },
         encodedDepositData,
         gasPrice!,
-        type
-      )
+        type,
+      );
     }
-
   };
 
   createEffect(() => {
-    console.log("approveToTheBridge", approveToTheBridge());
+    console.log("approveToTheBridge", handlerToApprove());
 
-    if (approveToTheBridge()) {
+    if (approveERC20Handler()) {
       prepareDepositData();
     }
-  }, approveToTheBridge());
+  }, approveERC20Handler());
 
   return (
     <div>
