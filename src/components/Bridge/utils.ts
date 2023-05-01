@@ -1,4 +1,4 @@
-import { DynamicERC20FeeHandlerEVM, DynamicERC20FeeHandlerEVM__factory, ERC20, ERC20__factory, FeeHandlerRouter, FeeHandlerRouter__factory } from "@buildwithsygma/sygma-contracts";
+import { Bridge, DynamicERC20FeeHandlerEVM, DynamicERC20FeeHandlerEVM__factory, ERC20, ERC20__factory, FeeHandlerRouter, FeeHandlerRouter__factory } from "@buildwithsygma/sygma-contracts";
 import { ContractTransactionResponse, ethers, TransactionReceipt } from "ethers";
 import { Accessor, Setter } from "solid-js";
 import { Domain } from "../../types";
@@ -92,7 +92,7 @@ export const preparedDepositDataWithoutFee = async (
   return [despositDataHex, destinationId as string, resourceId];
 };
 
-export const fetchFeeHandlerAddress = async (domains: Accessor<{ domains: Domain[] } | [] >, signer: Accessor<ethers.Signer>, currentDomainId: { id: number, chainId: number }, resourceId: string, destinationId: string): Promise<string> => {
+export const fetchFeeHandlerAddress = async (domains: Accessor<{ domains: Domain[] } | []>, signer: Accessor<ethers.Signer>, currentDomainId: { id: number, chainId: number }, resourceId: string, destinationId: string): Promise<string> => {
 
   const feeRouterInstance = FeeHandlerRouter__factory.connect(
     (domains() as { domains: Domain[] }).domains.find(
@@ -122,7 +122,7 @@ export const requestFeeOracleFee = async (
       'Cache-Control': 'no-cache',
     },
   })
-  
+
   const data = await response.json()
 
   return data.response
@@ -130,7 +130,7 @@ export const requestFeeOracleFee = async (
 
 export type FeeOracleResponse = { baseEffectiveRate: string, tokenEffectiveRate: string, dstGasPrice: string, expirationTimestamp: number, fromDomainID: number, toDomainID: number, resourceID: string, msgGasLimit: number, signature: string }
 
-export const createFeeOracleData = (oracleResponse: FeeOracleResponse , amount: string): string => {
+export const createFeeOracleData = (oracleResponse: FeeOracleResponse, amount: string): string => {
   const oracleData = ethers.solidityPacked([
     'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes32', 'uint256'
   ], [
@@ -148,7 +148,7 @@ export const createFeeOracleData = (oracleResponse: FeeOracleResponse , amount: 
   return oracleData + signature + ethers.toBeHex(amount, 32).substring(2)
 }
 
-export const calculateDynamicFee = async (feeHandlerWithOracle: DynamicERC20FeeHandlerEVM, sender: string, fromDomainId: string, toDomainId: string, resourceId: string, depositData: string, feeData: string) => {
+export const calculateDynamicFee = async (feeHandlerWithOracle: DynamicERC20FeeHandlerEVM, sender: string, fromDomainId: number, toDomainId: number, resourceId: string, depositData: string, feeData: string) => {
   const res = await feeHandlerWithOracle.calculateFee(
     sender,
     fromDomainId,
@@ -157,6 +157,36 @@ export const calculateDynamicFee = async (feeHandlerWithOracle: DynamicERC20FeeH
     depositData,
     feeData
   )
-  console.log("🚀 ~ file: utils.ts:158 ~ calculateDynamicFee ~ res:", res)
+  const [feeValue, tokenAddress] = res
 
+  return { fee: feeValue, tokenAddress, calculatedFeeRate: ethers.formatEther(res.fee), feeData }
+
+}
+
+export const depositToBridge = async (
+  bridge: Bridge,
+  destinationId: number,
+  resourceId: string,
+  feeData: { feeData: string, feeValue: any },
+  depositData: string,
+  gasPrice: ethers.FeeData
+) => {
+  console.log("🚀 ~ file: utils.ts:173 ~ feeData:", feeData)
+  try {
+    const res = await bridge.deposit(
+      destinationId,
+      resourceId,
+      depositData,
+      feeData.feeData,
+      {
+        gasPrice: gasPrice.gasPrice,
+        value: feeData.feeValue,
+      }
+    )
+
+    console.log("🚀 ~ file: utils.ts:183 ~ res:", res)
+  } catch(e){
+    console.log("🚀 ~ file: utils.ts:184 ~ e:", e)
+    
+  }
 }

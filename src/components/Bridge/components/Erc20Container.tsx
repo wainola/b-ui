@@ -1,4 +1,6 @@
 import {
+  Bridge__factory,
+  DynamicERC20FeeHandlerEVM__factory,
   ERC20,
   FeeHandlerRouter,
   FeeHandlerRouter__factory,
@@ -18,7 +20,7 @@ import {
 import { resourceIdtoChainId } from "../../../resourceIdToChainId";
 import { Domain } from "../../../types";
 import { ConnectedResource } from "../Bridge";
-import { fetchContractNameAndBalance, approveTheBridge, preparedDepositDataWithoutFee, fetchFeeHandlerAddress, requestFeeOracleFee, createFeeOracleData, FeeOracleResponse } from "../utils";
+import { fetchContractNameAndBalance, approveTheBridge, preparedDepositDataWithoutFee, fetchFeeHandlerAddress, requestFeeOracleFee, createFeeOracleData, FeeOracleResponse, calculateDynamicFee, depositToBridge } from "../utils";
 
 export default function Erc20Container({
   resource,
@@ -26,12 +28,14 @@ export default function Erc20Container({
   bridge,
   domains,
   chainId,
+  provider
 }: {
   resource: ConnectedResource;
   signer: Accessor<ethers.Signer>;
   bridge: string;
   domains: Accessor<{ domains: Domain[] } | []>;
   chainId: Accessor<number | null>;
+  provider: Accessor<ethers.BrowserProvider | null>;
 }) {
   const [amountToDeposit, setAmountToDeposit] = createSignal<string | null>(
     null,
@@ -107,6 +111,36 @@ export default function Erc20Container({
 
     const typeOfFeeHandler = currentDomain?.feeHandlers.find((elem) => elem.address === feeHandlerAddress)
     console.log("🚀 ~ file: Erc20Container.tsx:109 ~ prepareDepositData ~ typeOfFeeHandler:", typeOfFeeHandler)
+
+    const { type } = typeOfFeeHandler!
+
+    if(type === 'oracle'){
+      const feeHandler = DynamicERC20FeeHandlerEVM__factory.connect(feeHandlerAddress, signer())
+      const calculatedFee = await calculateDynamicFee(
+        feeHandler,
+        await (signer()).getAddress(),
+        currentDomainId?.id!,
+        Number(destinationId),
+        resourceId,
+        encodedDepositData,
+        feeData
+      )
+      console.log("🚀 ~ file: Erc20Container.tsx:125 ~ prepareDepositData ~ calculatedFee:", calculatedFee)
+
+      const gasPrice = await provider()?.getFeeData()
+      console.log("🚀 ~ file: Erc20Container.tsx:131 ~ prepareDepositData ~ gasPrice:", gasPrice)
+
+      const bridgeInstance = Bridge__factory.connect(bridge, signer())
+
+      await depositToBridge(
+        bridgeInstance,
+        Number(destinationId),
+        resourceId,
+        { feeData: calculatedFee.feeData, feeValue: calculatedFee.fee },
+        encodedDepositData,
+        gasPrice!
+      )
+    }
 
   };
 

@@ -114,6 +114,7 @@ export default function Bridge({
           bridge={domainSelected?.bridge}
           domains={domains}
           chainId={chainId}
+          provider={provider}
         />
       ));
 
